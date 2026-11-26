@@ -28,6 +28,10 @@ body{margin:0;background:var(--bg);color:var(--ink);
 main{max-width:600px;margin:0 auto;padding:28px 16px 56px}
 h1{font-size:30px;line-height:1.25;margin:0 0 8px;font-weight:800;letter-spacing:-.5px}
 h2{font-size:19px;margin:0 0 12px;font-weight:800}
+.cats{display:flex;gap:8px;margin:0 0 18px}
+.cats a,.cats span{flex:1;text-align:center;padding:10px 0;border-radius:10px;font-weight:800;font-size:15px;text-decoration:none;min-height:44px}
+.cats a{background:var(--panel);color:var(--ink2)}
+.cats span{background:var(--ink);color:var(--bg)}
 .kicker{font-size:14px;color:var(--ink3);margin:0 0 10px;font-weight:600}
 .rule{width:56px;height:6px;background:var(--accent);margin:16px 0 18px}
 .lede{color:var(--ink2);margin:0 0 22px}
@@ -93,6 +97,7 @@ a{color:var(--ink);text-underline-offset:3px}
 </head>
 <body>
 <main>
+  <nav class="cats" aria-label="切换类别"><span aria-current="page">EB-1</span><a href="../eb2-china-queue/">EB-2</a><a href="../eb3-china-queue/">EB-3</a></nav>
   <p class="kicker">中国大陆 · EB-1 · I-485</p>
   <h1>你在 485 的队伍里<br>排第几？</h1>
   <div class="rule"></div>
@@ -134,9 +139,9 @@ a{color:var(--ink);text-underline-offset:3px}
     <ul class="plain">
       <li><b>数据源</b>：USCIS《Pending Applications for Employment-Based Preference Categories》月度表（<a href="https://www.uscis.gov/tools/reports-and-studies/immigration-and-citizenship-data" rel="noopener">USCIS 数据页</a>），取 China 表里的 EB1，把 “Available” 和 “Awaiting Availability” 两段合并。</li>
       <li><b>只统计已经递了 485 的人</b>。PD 比你早但还没递 485 的、走领馆程序的，都不在里面。</li>
-      <li>USCIS 把小于 10 的格子隐去（标 D）。这里每个 D 按 5 估，范围按 1–9 算。10 月这期共 60 个 D，按 5 估总数正好 6,307。</li>
+      <li>USCIS 把小于 10 的格子隐去（标 D）。这里每个 D 按 5 估，范围按 1–9 算。<span id="dnote"></span></li>
       <li>“前面有多少份” = 所有 PD 比你早的 pending 485。月内按天数线性折算；没填日就按月中算。</li>
-      <li><b>2023 年 12 月及之后的 PD</b>：10 月才开始出现在表里，目前只有零星几份，后面几期还会涨，所以这一段的“前面人数”是下限。</li>
+      <li><b><span id="inc1"></span>的 PD</b>：10 月才开始出现在表里，目前只有零星几份，后面几期还会涨，所以这一段的“前面人数”是下限。</li>
       <li>时间粗算 = 前面的份数 ÷ 每年名额。2,800 ≈ 14 万 × 28.6% × 7%（法定最低）；4,300 ≈ 21.5 万 × 28.6% × 7%（含家庭类溢出的常见估计）。它假设前面每一份都要用掉一个名额，没算别国溢出给中国的名额，也没算被拒和撤回的，只能当量级参考。</li>
       <li>排期用的是国务院 <span id="vb1"></span> Visa Bulletin：Final Action Date <span id="fad1"></span>，Dates for Filing <span id="dff1"></span>。当月能不能用 Dates for Filing 递交，以 USCIS 公告为准。</li>
     </ul>
@@ -185,10 +190,11 @@ const SNAPS = [
     2024: [N,N,11,N,N,N,0,0,0,0,0,0] } }
 ];
 const YEARS = [2017,2018,2019,2020,2021,2022,2023,2024];
-const BULLETIN = { label: '2026 年 11 月', fad: [2023,8,1], dff: [2024,7,1] };
-const COMPLETE_THROUGH = [2023,11];          // PD months after this are still filling in
-const SUPPLY = [2800, 4300];                 // annual visa-number scenarios
-const CHART_FROM = [2022,1], CHART_TO = [2024,6];
+const BULLETIN = { label: '2026 年 11 月', fad: [2023, 8, 1], dff: [2024, 7, 1] };
+const COMPLETE_THROUGH = [2023, 11];
+const SUPPLY = [2800, 4300];
+const CHART_FROM = [2022, 1], CHART_TO = [2024, 6];
+const DEFAULT_PD = [2023, 9];
 /* ======================================================================= */
 
 const L = SNAPS[SNAPS.length-1];
@@ -252,6 +258,8 @@ function render(){
   else h += `<span class="badge wait">还不能递 485</span>
     <p class="statusline">PD ${pdTxt} 晚于 ${BULLETIN.label}的 Dates for Filing（${dffTxt}）。要等递交表前进到你的日期。</p>`;
 
+  if (!day && y === BULLETIN.fad[0] && m === BULLETIN.fad[1] && BULLETIN.fad[2] > 1)
+    h += `<p class="note"><b>注意</b>：排期正好卡在这个月的 ${BULLETIN.fad[2]} 日。没填日的话我按 15 日算，填上你的日才准。</p>`;
   const least = (r.incomplete || r.state === 'wait') ? '至少 ' : '约 ';
   h += `<div class="tiles">
     <div class="tile"><p class="lab">你前面还有</p>
@@ -302,7 +310,7 @@ function months(from, to){ const a=[]; let [y,m]=from; while (cmp([y,m],to)<=0){
 function drawChart(me){
   const ms = months(CHART_FROM, CHART_TO), ch = $('chart');
   const max = Math.max(...ms.map(([y,m]) => v(cell(L,y,m),'est')));
-  ch.innerHTML = '';
+  ch.innerHTML = ''; ch.style.gap = $('xlab').style.gap = ms.length > 40 ? '1px' : '2px';
   ms.forEach(([y,m]) => {
     const raw = cell(L,y,m), n = v(raw,'est');
     const b = document.createElement('button'); b.type = 'button';
@@ -324,10 +332,10 @@ function drawChart(me){
   const groups = {}; ms.forEach(([y]) => groups[y] = (groups[y]||0)+1);
   $('xlab').innerHTML = Object.entries(groups).map(([y,n]) => `<span style="flex:${n} 1 0">${y}</span>`).join('');
   if (me && cmp(me,CHART_FROM)>=0 && cmp(me,CHART_TO)<=0){ const raw=cell(L,me[0],me[1]); $('readout').textContent = `${me[0]} 年 ${me[1]} 月（你）：${raw===null?'少于 10':fmt(raw)} 份`; }
-  else $('readout').textContent = me ? '你的 PD 不在图的范围内（图只画 2022.01–2024.06）' : '';
+  else $('readout').textContent = me ? `你的 PD 不在图的范围内（图只画 ${CHART_FROM[0]}.${String(CHART_FROM[1]).padStart(2,'0')}–${CHART_TO[0]}.${String(CHART_TO[1]).padStart(2,'0')}）` : '';
   // table
   let t = `<thead><tr><th>PD 月份</th>${SNAPS.map(s=>`<th>${s.short}</th>`).join('')}</tr></thead><tbody>`;
-  t += `<tr><td>2021 及更早（估）</td>${SNAPS.map(s=>`<td>${fmt(sumBefore(s,2022,1,'est'))}</td>`).join('')}</tr>`;
+  t += `<tr><td>${CHART_FROM[0]-1} 及更早（估）</td>${SNAPS.map(s=>`<td>${fmt(sumBefore(s,CHART_FROM[0],CHART_FROM[1],'est'))}</td>`).join('')}</tr>`;
   ms.forEach(([y,m]) => { t += `<tr class="${me&&me[0]===y&&me[1]===m?'me':''}"><td>${y}.${String(m).padStart(2,'0')}${me&&me[0]===y&&me[1]===m?'（你）':''}</td>${SNAPS.map(s=>`<td>${showCell(cell(s,y,m))}</td>`).join('')}</tr>`; });
   t += `<tr><td><b>合计（估）</b></td>${SNAPS.map(s=>`<td><b>${fmt(sumAll(s,'est'))}</b></td>`).join('')}</tr></tbody>`;
   $('tbl').innerHTML = t;
@@ -337,11 +345,15 @@ function drawChart(me){
   const ys = $('y'), msel = $('m');
   ys.innerHTML = '<option value="prior">2016 及更早</option>' + [...YEARS,2025,2026].map(y=>`<option value="${y}">${y}</option>`).join('');
   msel.innerHTML = Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1} 月</option>`).join('');
-  ys.value = '2023'; msel.value = '9';
+  ys.value = String(DEFAULT_PD[0]); msel.value = String(DEFAULT_PD[1]);
   $('asof1').textContent = cnDate(L.asof);
   $('vb1').textContent = BULLETIN.label;
   $('fad1').textContent = BULLETIN.fad.join('.');
   $('dff1').textContent = BULLETIN.dff.join('.');
+  { let nd = 0; for (const k of ['prior', ...YEARS]) nd += L.d[k].filter(x => x === null).length;
+    $('dnote').textContent = `最新一期共 ${nd} 个 D，按 5 估，合计约 ${fmt(sumAll(L,'est'))} 份。`;
+    let [iy, im] = COMPLETE_THROUGH; im++; if (im > 12) { im = 1; iy++; }
+    $('inc1').textContent = `${iy} 年 ${im} 月及之后`; }
   ['y','m','d'].forEach(id => { $(id).addEventListener('input', render); $(id).addEventListener('change', render); });
   render();
 })();
