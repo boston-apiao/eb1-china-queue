@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>中国大陆 EB-1 · 485 排队位置查询</title>
+<meta name="description" content="输入你的 Priority Date，用 USCIS 官方 I-485 积压数据算出你前面还有多少份、排在第几百分位、同月 PD 的人清得多快。">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#ffffff; --panel:#f5f4f1; --ink:#161616; --ink2:#5c5c5c; --ink3:#767676;
+  --line:#e2e0db; --accent:#d42c22; --bar:#c2c0bb; --bar-on:#161616; --ok:#1f6f3d; --okbg:#e6f2ea;
+  --warnbg:#fbefd9; --warn:#7a4b00; --waitbg:#ececec; --wait:#444444;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    color-scheme: dark;
+    --bg:#151515; --panel:#202020; --ink:#f0f0f0; --ink2:#b4b4b4; --ink3:#9a9a9a;
+    --line:#333333; --accent:#ff7466; --bar:#5a5a5a; --bar-on:#f0f0f0; --ok:#7fd49c; --okbg:#1b3324;
+    --warnbg:#3a2c10; --warn:#f0c574; --waitbg:#2c2c2c; --wait:#cfcfcf;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei","Segoe UI",sans-serif;
+  font-size:16px;line-height:1.6}
+main{max-width:600px;margin:0 auto;padding:28px 16px 56px}
+h1{font-size:30px;line-height:1.25;margin:0 0 8px;font-weight:800;letter-spacing:-.5px}
+h2{font-size:19px;margin:0 0 12px;font-weight:800}
+.kicker{font-size:14px;color:var(--ink3);margin:0 0 10px;font-weight:600}
+.rule{width:56px;height:6px;background:var(--accent);margin:16px 0 18px}
+.lede{color:var(--ink2);margin:0 0 22px}
+.num{font-variant-numeric:tabular-nums}
+form{background:var(--panel);padding:18px 16px;border-radius:14px}
+fieldset{border:0;padding:0;margin:0}
+legend{font-weight:800;padding:0;margin-bottom:10px;font-size:17px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:4px;flex:1 1 90px;min-width:0}
+.field label{font-size:13px;color:var(--ink2);font-weight:600}
+select,input[type=number]{font:inherit;font-size:17px;padding:11px 10px;border:1.5px solid var(--line);border-radius:10px;
+  background:var(--bg);color:var(--ink);width:100%;min-height:48px}
+select:focus-visible,input:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.hint{font-size:13px;color:var(--ink3);margin:10px 0 0}
+section{margin-top:26px}
+.badge{display:inline-block;font-weight:800;font-size:15px;padding:6px 12px;border-radius:999px}
+.badge.current{background:var(--okbg);color:var(--ok)}
+.badge.canfile{background:var(--warnbg);color:var(--warn)}
+.badge.wait{background:var(--waitbg);color:var(--wait)}
+.statusline{margin:10px 0 0;color:var(--ink2)}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}
+.tile{background:var(--panel);border-radius:14px;padding:16px;min-width:0}
+.tile.wide{grid-column:1 / -1}
+.tile .lab{font-size:14px;color:var(--ink2);font-weight:600;margin:0 0 4px}
+.tile .big{font-size:40px;line-height:1.1;font-weight:800;letter-spacing:-1px;margin:0}
+.tile .big small{font-size:17px;font-weight:700;letter-spacing:0;margin-left:4px}
+.tile .sub{font-size:13px;color:var(--ink3);margin:6px 0 0}
+.meter{position:relative;height:14px;background:var(--bar);border-radius:7px;margin:14px 0 6px;overflow:hidden}
+.meter i{position:absolute;left:0;top:0;bottom:0;background:var(--bar-on);border-radius:7px 0 0 7px}
+.meterlab{display:flex;justify-content:space-between;font-size:12px;color:var(--ink3)}
+.trend{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin:6px 0 0}
+.trend b{display:block;font-size:26px;line-height:1.15;font-weight:800;letter-spacing:-.5px;color:var(--ink)}
+.trend span{color:var(--ink2);font-size:13px;white-space:nowrap}
+.trend .arrow{padding-bottom:4px}
+.trend .arrow{font-size:18px;color:var(--ink3)}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+th:first-child,td:first-child{text-align:left}
+th{font-size:13px;color:var(--ink2);font-weight:700}
+tr.me td{font-weight:800}
+.eta input[type=number]{max-width:130px;font-size:16px;padding:8px 10px;min-height:44px}
+.note{font-size:13.5px;color:var(--ink2);margin:10px 0 0}
+.chartwrap{margin-top:8px}
+.chart{position:relative;display:flex;align-items:flex-end;gap:2px;height:196px;border-bottom:1.5px solid var(--ink3);padding-top:44px}
+.chart button{flex:1 1 0;min-width:3px;border:0;padding:0;margin:0;background:var(--bar);border-radius:3px 3px 0 0;cursor:pointer;position:relative}
+.chart button.me{background:var(--bar-on)}
+.chart button:hover,.chart button:focus-visible{background:var(--accent);outline:none}
+.chart .fad{position:absolute;top:0;bottom:0;width:0;border-left:1.5px dashed var(--ink2);pointer-events:none}
+.chart .fadlab{position:absolute;top:0;font-size:11.5px;color:var(--ink2);white-space:nowrap;pointer-events:none;font-weight:600}
+.chart .melab{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font-size:12px;font-weight:800;color:var(--ink);padding-bottom:2px;pointer-events:none}
+.xlab{display:flex;gap:2px;font-size:12px;color:var(--ink3);margin-top:4px}
+.xlab span{border-left:1.5px solid var(--line);padding-left:4px}
+.readout{font-size:14px;margin:10px 0 0;min-height:22px;font-weight:600}
+details{margin-top:12px}
+summary{cursor:pointer;font-weight:700;padding:10px 0;min-height:44px}
+ul.plain{padding-left:20px;margin:8px 0 0;color:var(--ink2);font-size:14.5px}
+ul.plain li{margin-bottom:6px}
+footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-size:13px;color:var(--ink3)}
+a{color:var(--ink);text-underline-offset:3px}
+[hidden]{display:none !important}
+@media (max-width:380px){.tile .big{font-size:34px} h1{font-size:26px}}
+</style>
+</head>
+<body>
+<main>
+  <p class="kicker">中国大陆 · EB-1 · I-485</p>
+  <h1>你在 485 的队伍里<br>排第几？</h1>
+  <div class="rule"></div>
+  <p class="lede">输入你的 Priority Date，用 USCIS 官方每月公布的 I-485 积压数据，算出你前面还有多少份、排在第几百分位，以及和你同月 PD 的人清得多快。</p>
+
+  <form id="f" onsubmit="return false">
+    <fieldset>
+      <legend>你的 Priority Date</legend>
+      <div class="row">
+        <div class="field"><label for="y">年</label>
+          <select id="y"></select></div>
+        <div class="field"><label for="m">月</label>
+          <select id="m"></select></div>
+        <div class="field"><label for="d">日（可不填）</label>
+          <input id="d" type="number" inputmode="numeric" min="1" max="31" placeholder="15"></div>
+      </div>
+      <p class="hint">全部在你的浏览器里算，不上传、不保存任何信息。</p>
+    </fieldset>
+  </form>
+
+  <section id="out" aria-live="polite"></section>
+
+  <section>
+    <h2>每个 PD 月份还有多少份在排</h2>
+    <p class="note" style="margin-top:0">中国大陆 EB-1，<span id="asof1"></span> 数据。点柱子看数字。</p>
+    <div class="chartwrap">
+      <div class="chart" id="chart" role="group" aria-label="各 PD 月份的 pending I-485 数量"></div>
+      <div class="xlab" id="xlab" aria-hidden="true"></div>
+      <p class="readout num" id="readout"></p>
+    </div>
+    <details>
+      <summary>看表格（2026 年 8、9、10 月三期对比）</summary>
+      <div style="overflow-x:auto"><table id="tbl"></table></div>
+    </details>
+  </section>
+
+  <section>
+    <h2>这些数怎么来的</h2>
+    <ul class="plain">
+      <li><b>数据源</b>：USCIS《Pending Applications for Employment-Based Preference Categories》月度表（<a href="https://www.uscis.gov/tools/reports-and-studies/immigration-and-citizenship-data" rel="noopener">USCIS 数据页</a>），取 China 表里的 EB1，把 “Available” 和 “Awaiting Availability” 两段合并。</li>
+      <li><b>只统计已经递了 485 的人</b>。PD 比你早但还没递 485 的、走领馆程序的，都不在里面。</li>
+      <li>USCIS 把小于 10 的格子隐去（标 D）。这里每个 D 按 5 估，范围按 1–9 算。10 月这期共 60 个 D，按 5 估总数正好 6,307。</li>
+      <li>“前面有多少份” = 所有 PD 比你早的 pending 485。月内按天数线性折算；没填日就按月中算。</li>
+      <li><b>2023 年 12 月及之后的 PD</b>：10 月才开始出现在表里，目前只有零星几份，后面几期还会涨，所以这一段的“前面人数”是下限。</li>
+      <li>时间粗算 = 前面的份数 ÷ 每年名额。2,800 ≈ 14 万 × 28.6% × 7%（法定最低）；4,300 ≈ 21.5 万 × 28.6% × 7%（含家庭类溢出的常见估计）。它假设前面每一份都要用掉一个名额，没算别国溢出给中国的名额，也没算被拒和撤回的，只能当量级参考。</li>
+      <li>排期用的是国务院 <span id="vb1"></span> Visa Bulletin：Final Action Date <span id="fad1"></span>，Dates for Filing <span id="dff1"></span>。当月能不能用 Dates for Filing 递交，以 USCIS 公告为准。</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>波士顿阿漂 整理 · 每月 USCIS 出新表后更新。<br>这是公开数据的算术，不是法律意见，也不是对你个案的预测。个案问题请找移民律师。</p>
+  </footer>
+</main>
+
+<script>
+/* ============ DATA: USCIS EB inventory, China sheet, EB1 rows ============
+   Each year: 12 cells, Jan..Dec. null = "D" (suppressed, 1-9). Available + Awaiting merged.
+   To update: append a new snapshot object and update BULLETIN / COMPLETE_THROUGH. */
+const N = null;
+const SNAPS = [
+  { asof: '2026-08-05', short: '8 月 5 日', d: {
+    prior: [N,N,16,N,13,11,N,N,N,15,16,N],
+    2017: [N,N,0,N,N,N,N,N,N,N,N,N],
+    2018: [N,N,N,N,N,0,0,N,N,N,N,0],
+    2019: [N,N,N,N,N,N,N,N,N,N,N,N],
+    2020: [N,N,N,N,N,N,N,N,N,N,14,22],
+    2021: [N,N,19,20,N,13,16,N,N,15,19,19],
+    2022: [32,31,20,31,28,34,50,53,43,54,105,223],
+    2023: [257,281,489,520,652,642,610,527,565,485,525,0],
+    2024: [0,0,0,0,0,0,0,0,0,0,0,0] } },
+  { asof: '2026-09-03', short: '9 月 3 日', d: {
+    prior: [N,N,17,N,13,N,N,N,N,14,15,N],
+    2017: [N,N,0,N,N,N,N,N,N,N,N,N],
+    2018: [N,N,N,N,N,0,N,N,N,N,N,N],
+    2019: [N,N,N,N,N,0,N,N,N,N,N,N],
+    2020: [N,N,N,N,N,N,N,N,N,N,13,23],
+    2021: [N,N,18,18,N,N,18,N,12,15,19,21],
+    2022: [26,28,19,30,33,31,45,54,42,53,99,208],
+    2023: [230,251,450,462,602,593,608,526,568,485,524,0],
+    2024: [0,0,0,0,0,0,0,0,0,0,0,0] } },
+  { asof: '2026-10-05', short: '10 月 5 日', d: {
+    prior: [N,N,19,N,11,N,N,N,N,14,11,N],
+    2017: [N,N,0,N,N,N,N,N,N,N,N,N],
+    2018: [N,N,N,N,N,0,0,N,N,N,N,N],
+    2019: [N,N,N,N,N,0,N,N,N,N,N,N],
+    2020: [N,N,N,N,N,N,N,N,N,N,N,21],
+    2021: [N,N,19,15,N,11,17,N,12,15,19,28],
+    2022: [25,29,24,34,37,31,44,54,45,57,90,189],
+    2023: [221,252,413,422,571,569,595,519,553,480,519,11],
+    2024: [N,N,11,N,N,N,0,0,0,0,0,0] } }
+];
+const YEARS = [2017,2018,2019,2020,2021,2022,2023,2024];
+const BULLETIN = { label: '2026 年 11 月', fad: [2023,8,1], dff: [2024,7,1] };
+const COMPLETE_THROUGH = [2023,11];          // PD months after this are still filling in
+const SUPPLY = [2800, 4300];                 // annual visa-number scenarios
+const CHART_FROM = [2022,1], CHART_TO = [2024,6];
+/* ======================================================================= */
+
+const L = SNAPS[SNAPS.length-1];
+const $ = id => document.getElementById(id);
+const fmt = n => Math.round(n).toLocaleString('en-US');
+const v = (x, mode) => x === null ? (mode==='lo'?1 : mode==='hi'?9 : 5) : x;
+const cell = (s, y, m) => (s.d[y] ? s.d[y][m-1] : 0);
+const sum = (arr, mode) => arr.reduce((a,x)=>a+v(x,mode),0);
+function sumBefore(s, y, m, mode){
+  let t = sum(s.d.prior, mode);
+  for (const yy of YEARS){
+    if (yy < y) t += sum(s.d[yy], mode);
+    else if (yy === y) t += sum(s.d[yy].slice(0, m-1), mode);
+  }
+  return t;
+}
+function sumAll(s, mode){ let t = sum(s.d.prior, mode); for (const yy of YEARS) t += sum(s.d[yy], mode); return t; }
+const cmp = (a,b) => a[0]-b[0] || a[1]-b[1] || ((a[2]||0)-(b[2]||0));
+const cnDate = iso => { const [y,m,d] = iso.split('-').map(Number); return `${y} 年 ${m} 月 ${d} 日`; };
+const showCell = x => x === null ? '<10' : fmt(x);
+function quarter(base, months){
+  const d = new Date(base.getTime()); d.setMonth(d.getMonth() + Math.round(months));
+  return `${d.getFullYear()} 年 Q${Math.floor(d.getMonth()/3)+1}`;
+}
+
+function compute(y, m, day){
+  const dim = new Date(y, m, 0).getDate();
+  const frac = day ? Math.min(Math.max(day-1,0), dim-1)/dim : 0.5;
+  const own = cell(L, y, m);
+  const ahead = {}, total = {};
+  for (const mode of ['est','lo','hi']){
+    ahead[mode] = sumBefore(L, y, m, mode) + frac * v(own, mode);
+    total[mode] = sumAll(L, mode);
+  }
+  const pd = [y, m, day || 15];
+  const state = cmp(pd, BULLETIN.fad) < 0 ? 'current' : cmp(pd, BULLETIN.dff) < 0 ? 'canfile' : 'wait';
+  const incomplete = cmp([y,m], COMPLETE_THROUGH) > 0;
+  return { y, m, day, own, ahead, total, state, incomplete, pct: ahead.est/total.est*100,
+           cohort: SNAPS.map(s => ({ short: s.short, asof: s.asof, n: cell(s, y, m) })) };
+}
+
+function render(){
+  const yv = $('y').value, m = +$('m').value, dRaw = $('d').value.trim();
+  const day = dRaw ? Math.min(31, Math.max(1, parseInt(dRaw,10) || 0)) || null : null;
+  const out = $('out');
+  if (yv === 'prior'){
+    const p = sum(L.d.prior,'est');
+    out.innerHTML = `<span class="badge current">已经 current</span>
+      <p class="statusline">USCIS 把 2016 年及更早的 PD 合并成一栏（现在约 <b class="num">${fmt(p)}</b> 份还在排），没法再细分。你在整个队伍的最前面，批不批看的是你的 Field Office，不是排期。</p>`;
+    drawChart(null); return;
+  }
+  const y = +yv, r = compute(y, m, day);
+  const pdTxt = `${y} 年 ${m} 月${day ? ' ' + day + ' 日' : ''}`;
+  const fadTxt = `${BULLETIN.fad[0]} 年 ${BULLETIN.fad[1]} 月 ${BULLETIN.fad[2]} 日`;
+  const dffTxt = `${BULLETIN.dff[0]} 年 ${BULLETIN.dff[1]} 月 ${BULLETIN.dff[2]} 日`;
+  let h = '';
+  if (r.state === 'current') h += `<span class="badge current">已经 current</span>
+    <p class="statusline">PD ${pdTxt} 早于 ${BULLETIN.label}的 Final Action Date（${fadTxt}）。名额已经轮到你，现在等的是 Field Office 审到你的案子。排在队尾不等于案子有问题。</p>`;
+  else if (r.state === 'canfile') h += `<span class="badge canfile">可以递 485，等排期</span>
+    <p class="statusline">PD ${pdTxt} 晚于 Final Action Date（${fadTxt}），早于 Dates for Filing（${dffTxt}）。可以递 485、拿 EAD 和 AP，批准要等 Final Action Date 过你的日期。</p>`;
+  else h += `<span class="badge wait">还不能递 485</span>
+    <p class="statusline">PD ${pdTxt} 晚于 ${BULLETIN.label}的 Dates for Filing（${dffTxt}）。要等递交表前进到你的日期。</p>`;
+
+  const least = (r.incomplete || r.state === 'wait') ? '至少 ' : '约 ';
+  h += `<div class="tiles">
+    <div class="tile"><p class="lab">你前面还有</p>
+      <p class="big num">${least === '至少 ' ? '<small style="margin:0 4px 0 0">至少</small>' : ''}${fmt(r.ahead.est)}<small>份</small></p>
+      <p class="sub num">范围 ${fmt(r.ahead.lo)}–${fmt(r.ahead.hi)}（隐去的小格子按 1–9 算）</p></div>
+    <div class="tile"><p class="lab">已递交的队伍里，排在你前面的占</p>
+      <p class="big num">${r.pct >= 99.5 ? '100' : r.pct.toFixed(0)}<small>%</small></p>
+      <p class="sub num">队伍总长约 ${fmt(r.total.est)} 份</p></div>
+    <div class="tile wide"><p class="lab">你在队伍里的位置</p>
+      <div class="meter" role="img" aria-label="前面占 ${r.pct.toFixed(0)}%"><i style="width:${Math.min(100,r.pct).toFixed(1)}%"></i></div>
+      <div class="meterlab"><span>队头（PD 最早）</span><span>队尾</span></div></div>`;
+
+  // cohort trend
+  const c = r.cohort, first = c[0], last = c[c.length-1];
+  let delta = '';
+  if (first.n !== null && last.n !== null && first.n > 0){
+    const diff = last.n - first.n, p = diff/first.n*100;
+    delta = diff < 0 ? `8 月到 10 月少了 ${fmt(-diff)} 份（${p.toFixed(0)}%）` : diff > 0 ? `8 月到 10 月多了 ${fmt(diff)} 份（新递交的）` : '8 月到 10 月没变';
+  } else if (first.n === 0 && (last.n === null || last.n > 0)) delta = '10 月才开始有人递，后面几期还会涨';
+  else if (y >= 2025 || (first.n === 0 && last.n === 0)) delta = '这个月份的 PD 还没有人递 485';
+  h += `<div class="tile wide"><p class="lab">和你同月 PD（${y} 年 ${m} 月）的，USCIS 每期统计时还剩多少份</p>
+    <div class="trend num">${c.map((s,i)=>`${i?'<span class="arrow" aria-hidden="true">→</span>':''}<span>${s.short}<b>${showCell(s.n)}</b></span>`).join('')}</div>
+    <p class="sub">日期是 USCIS 每期数据的统计日（2026 年）。${delta}</p></div>`;
+
+  // ETA
+  if (r.state === 'canfile'){
+    const base = new Date(L.asof + 'T00:00:00');
+    const rows = SUPPLY.map(a => `<tr><td>每年 ${fmt(a)} 个名额</td><td>${r.incomplete?'最早 ':''}${quarter(base, r.ahead.est/(a/12))}</td></tr>`).join('');
+    h += `<div class="tile wide eta"><p class="lab">排期大概什么时候轮到你（粗算）</p>
+      <table><thead><tr><th>假设</th><th>Final Action Date 过你的 PD</th></tr></thead><tbody>${rows}
+      <tr><td><label for="cs">自己填每年名额</label><br><input id="cs" type="number" inputmode="numeric" min="500" max="20000" step="100" placeholder="例如 5000"></td><td id="csout">—</td></tr></tbody></table>
+      <p class="note">算法：前面 ${fmt(r.ahead.est)} 份 ÷ 每月名额，从 ${cnDate(L.asof)} 起算。偏保守，只当量级参考。${r.incomplete?'你这个 PD 段的数据还没填满，实际会更晚。':''}</p></div>`;
+  } else if (r.state === 'wait'){
+    h += `<div class="tile wide"><p class="lab">为什么不给时间估算</p>
+      <p class="sub" style="font-size:14.5px;color:var(--ink2)">USCIS 这张表只统计已经递了 485 的人。你前面除了这 ${fmt(r.total.est)} 份，还有所有 PD 比你早、但还没递的人，这部分没有公开数据，硬算会明显偏乐观。</p></div>`;
+  }
+  h += '</div>';
+  out.innerHTML = h;
+  const cs = $('cs');
+  if (cs) cs.addEventListener('input', () => {
+    const a = parseFloat(cs.value);
+    $('csout').textContent = (a >= 500 && a <= 20000) ? (r.incomplete?'最早 ':'') + quarter(new Date(L.asof+'T00:00:00'), r.ahead.est/(a/12)) : '—';
+  });
+  drawChart([y,m]);
+}
+
+function months(from, to){ const a=[]; let [y,m]=from; while (cmp([y,m],to)<=0){ a.push([y,m]); m++; if(m>12){m=1;y++;} } return a; }
+function drawChart(me){
+  const ms = months(CHART_FROM, CHART_TO), ch = $('chart');
+  const max = Math.max(...ms.map(([y,m]) => v(cell(L,y,m),'est')));
+  ch.innerHTML = '';
+  ms.forEach(([y,m]) => {
+    const raw = cell(L,y,m), n = v(raw,'est');
+    const b = document.createElement('button'); b.type = 'button';
+    b.style.height = Math.max(2, n/max*100) + '%';
+    const txt = `${y} 年 ${m} 月：${raw===null?'少于 10':fmt(raw)} 份`;
+    b.setAttribute('aria-label', txt); b.title = txt;
+    if (me && me[0]===y && me[1]===m){ b.className = 'me'; b.innerHTML = '<span class="melab">你</span>'; }
+    const show = () => $('readout').textContent = txt;
+    b.addEventListener('mouseenter', show); b.addEventListener('focus', show); b.addEventListener('click', show);
+    ch.appendChild(b);
+  });
+  const idx = ms.findIndex(([y,m]) => cmp([y,m], BULLETIN.fad) >= 0);
+  if (idx > 0){
+    const pos = idx/ms.length*100;
+    const line = document.createElement('div'); line.className='fad'; line.style.left = `calc(${pos}% - 1px)`; ch.appendChild(line);
+    const l1 = document.createElement('div'); l1.className='fadlab'; l1.style.right = `calc(${100-pos}% + 6px)`; l1.textContent='已 current'; ch.appendChild(l1);
+    const l2 = document.createElement('div'); l2.className='fadlab'; l2.style.left = `calc(${pos}% + 6px)`; l2.textContent='等排期'; ch.appendChild(l2);
+  }
+  const groups = {}; ms.forEach(([y]) => groups[y] = (groups[y]||0)+1);
+  $('xlab').innerHTML = Object.entries(groups).map(([y,n]) => `<span style="flex:${n} 1 0">${y}</span>`).join('');
+  if (me && cmp(me,CHART_FROM)>=0 && cmp(me,CHART_TO)<=0){ const raw=cell(L,me[0],me[1]); $('readout').textContent = `${me[0]} 年 ${me[1]} 月（你）：${raw===null?'少于 10':fmt(raw)} 份`; }
+  else $('readout').textContent = me ? '你的 PD 不在图的范围内（图只画 2022.01–2024.06）' : '';
+  // table
+  let t = `<thead><tr><th>PD 月份</th>${SNAPS.map(s=>`<th>${s.short}</th>`).join('')}</tr></thead><tbody>`;
+  t += `<tr><td>2021 及更早（估）</td>${SNAPS.map(s=>`<td>${fmt(sumBefore(s,2022,1,'est'))}</td>`).join('')}</tr>`;
+  ms.forEach(([y,m]) => { t += `<tr class="${me&&me[0]===y&&me[1]===m?'me':''}"><td>${y}.${String(m).padStart(2,'0')}${me&&me[0]===y&&me[1]===m?'（你）':''}</td>${SNAPS.map(s=>`<td>${showCell(cell(s,y,m))}</td>`).join('')}</tr>`; });
+  t += `<tr><td><b>合计（估）</b></td>${SNAPS.map(s=>`<td><b>${fmt(sumAll(s,'est'))}</b></td>`).join('')}</tr></tbody>`;
+  $('tbl').innerHTML = t;
+}
+
+(function init(){
+  const ys = $('y'), msel = $('m');
+  ys.innerHTML = '<option value="prior">2016 及更早</option>' + [...YEARS,2025,2026].map(y=>`<option value="${y}">${y}</option>`).join('');
+  msel.innerHTML = Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1} 月</option>`).join('');
+  ys.value = '2023'; msel.value = '9';
+  $('asof1').textContent = cnDate(L.asof);
+  $('vb1').textContent = BULLETIN.label;
+  $('fad1').textContent = BULLETIN.fad.join('.');
+  $('dff1').textContent = BULLETIN.dff.join('.');
+  ['y','m','d'].forEach(id => { $(id).addEventListener('input', render); $(id).addEventListener('change', render); });
+  render();
+})();
+</script>
+</body>
+</html>
